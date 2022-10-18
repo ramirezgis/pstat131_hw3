@@ -1,0 +1,66 @@
+---
+title: "hw3"
+output: html_document
+date: "2022-10-18"
+---
+
+```{r setup, include=FALSE}
+library(tidymodels)
+library(tidyverse)
+titanic <- read.csv("data/titanic.csv")
+titanic
+set.seed(1234)
+```
+
+Question 1:
+
+```{r }
+titanic_split <- initial_split(titanic, 
+                               prop = 0.80, 
+                               strata = survived)
+titanic_split
+
+train <- training(titanic_split)
+test <- testing(titanic_split)
+```
+
+The training data set has 712 observations and the testing data set has 179 observations. This makes sense as the total observations the titanic data set has is 891, which is 179 + 712.
+
+There seems to be a lot of missing data for the variable cabin with 552 missing values; age has 136 missing values and embarked variable has 2 missing values. 
+
+###ANSWER: WHY IS IT GOOD TO USE STRATIFIED SAMPLINg?
+
+Question 2:
+
+```{r}
+dist_surv <- table(train$survived)
+dist_surv
+```
+
+There seems to be more values for not surviving (439 observations) than surviving (273 observations).
+
+Question 3:
+```{r}
+install.packages("corrr")
+library(corrr)
+library(ggplot2)
+
+
+cor_train <- train %>%
+  select(-survived) %>%
+  correlate()
+
+cor_train %>%
+  stretch() %>%
+  ggplot(aes(x, y, fill = r)) +
+  geom_tile() +
+  geom_text(aes(label = as.character(fashion(r))))
+```
+
+I see that pclass and fare are highly negatively correlated, while sib_sp and parch are almost highly postively correlated. The other variables have little to no correlation. 
+
+Question 4:
+```{r}
+
+```
+
