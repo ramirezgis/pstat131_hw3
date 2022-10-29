@@ -5,9 +5,15 @@ date: "2022-10-18"
 ---
 
 ```{r setup, include=FALSE}
+library(klaR)
+library(discrim)
 library(tidymodels)
 library(tidyverse)
-titanic <- read.csv("data/titanic.csv")
+library(corrplot)
+tidymodels_prefer()
+titanic <- read.csv("data/titanic.csv") %>% 
+  mutate(survived = factor(survived))
+titanic$pclass <- as.factor(titanic$pclass)
 titanic
 set.seed(1234)
 ```
@@ -41,20 +47,14 @@ There seems to be more values for not surviving (439 observations) than survivin
 
 Question 3:
 ```{r}
-install.packages("corrr")
+#install.packages("corrr")
 library(corrr)
 library(ggplot2)
 
-
-cor_train <- train %>%
-  select(-survived) %>%
-  correlate()
-
-cor_train %>%
-  stretch() %>%
-  ggplot(aes(x, y, fill = r)) +
-  geom_tile() +
-  geom_text(aes(label = as.character(fashion(r))))
+train %>%
+  select_if(is.numeric) %>%
+  cor(use = "complete.obs") %>%
+  corrplot(type = "lower", diag = FALSE, method = "color")
 ```
 
 I see that pclass and fare are highly negatively correlated, while sib_sp and parch are almost highly postively correlated. The other variables have little to no correlation. 
@@ -99,8 +99,7 @@ lda_wkflow <- workflow() %>%
 
 lda_fit <- fit(lda_wkflow, train)
 
-lda_fit %>% 
-  tidy()
+lda_fit
 ```
 
 Question 7
@@ -122,8 +121,8 @@ log_fit %>%
 
 Question 8
 ```{r}
-install.packages("naivebayes")
-library(naivebayes)
+# install.packages("naivebayes")
+#library(naivebayes)
 
 nb_mod <- naive_Bayes() %>% 
   set_engine("klaR") %>% 
@@ -134,15 +133,81 @@ nb_wkflow <- workflow() %>%
   add_model(nb_mod) %>% 
   add_recipe(titanic_recipe)
 
-log_fit <- fit(nb_wkflow, train)
+nb_fit <- fit(nb_wkflow, train)
 
-log_fit %>% 
-  tidy()
+nb_fit
 
 ```
 
 Question 9
-```{r}
+```{r, warning=FALSE}
+log_pred <- predict(log_fit, new_data = train, 
+                      type = "class") %>%
+  bind_cols(train %>% select(survived))
 
+log_acc <- log_pred %>%
+  accuracy(truth = survived, estimate = .pred_class)
+
+lda_pred <- predict(lda_fit, new_data = train,
+                    type = "class") %>%
+  bind_cols(train %>% select(survived))
+
+lda_acc <- lda_pred %>%
+  accuracy(truth = survived, estimate = .pred_class)
+
+qda_pred <- predict(qda_fit, new_data = train, 
+                    type = "class") %>%
+  bind_cols(train %>% select(survived))
+
+qda_acc <- qda_pred %>%
+  accuracy(truth = survived, estimate = .pred_class)
+
+nb_pred <- predict(nb_fit, new_data = train, 
+                   type = "class") %>%
+  bind_cols(train %>% select(survived))
+
+nb_acc <- nb_pred %>%
+  accuracy(truth = survived, estimate = .pred_class)
+print(log_acc)
+print(lda_acc)
+print(qda_acc)
+print(nb_acc)
+
+accuracies <- c(log_acc$.estimate, lda_acc$.estimate, 
+                qda_acc$.estimate, nb_acc$.estimate)
+models <- c("Logistic Regression", "LDA", "QDA", 
+            "Naive Bayes")
+results <- tibble(accuracies = accuracies, models = models)
+results %>%
+  arrange(-accuracies)
+```
+
+log_acc = 0.81
+lda_acc = 0.79
+qda_acc = 0.80
+nb_acc = 0.77
+
+The log fit had the highest accuracy on the training data.
+
+Question 10
+```{r}
+#Fit the model with the highest training accuracy to the testing data. Report the accuracy of the model on the testing data.
+
+#Again using the testing data, create a confusion matrix and visualize it. Plot an ROC curve and calculate the area under it (AUC).
+predict(log_fit, new_data = test, type = "prob")
+augment(log_fit, new_data = test) %>%
+  conf_mat(truth = survived, estimate = .pred_class)
+
+multi_metric <- metric_set(accuracy, sensitivity, specificity)
+
+augment(log_fit, new_data = test) %>%
+  multi_metric(truth = survived, estimate = .pred_class)
+
+augment(log_fit, new_data = test) %>%
+  roc_curve(survived, .pred_No) %>%
+  autoplot()
+
+augment(log_fit, new_data = test) %>%
+  roc_auc(survived, .pred_No) 
 ```
 
