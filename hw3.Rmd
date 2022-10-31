@@ -34,13 +34,15 @@ The training data set has 712 observations and the testing data set has 179 obse
 
 There seems to be a lot of missing data for the variable cabin with 552 missing values; age has 136 missing values and embarked variable has 2 missing values. 
 
-###ANSWER: WHY IS IT GOOD TO USE STRATIFIED SAMPLINg?
+It is good to use stratified sampling for this data as we want to see the characteristics for each of the survivor and non-survivor groups and see why the survivor group is more likely to survive. 
 
 Question 2:
 
 ```{r}
 dist_surv <- table(train$survived)
 dist_surv
+
+barplot((table(train$survived)), col = "pink")
 ```
 
 There seems to be more values for not surviving (439 observations) than surviving (273 observations).
@@ -57,7 +59,7 @@ train %>%
   corrplot(type = "lower", diag = FALSE, method = "color")
 ```
 
-I see that pclass and fare are highly negatively correlated, while sib_sp and parch are almost highly postively correlated. The other variables have little to no correlation. 
+I see that age and sib_sp are negatively correlated, and age and parch are also negatively correlated but not as high as age and sib_sp. Meanwhile sib_sp and parch are almost highly postively correlated. The other variables have little to no correlation. 
 
 Question 4:
 ```{r}
@@ -121,9 +123,6 @@ log_fit %>%
 
 Question 8
 ```{r}
-# install.packages("naivebayes")
-#library(naivebayes)
-
 nb_mod <- naive_Bayes() %>% 
   set_engine("klaR") %>% 
   set_mode("classification") %>%
@@ -168,10 +167,6 @@ nb_pred <- predict(nb_fit, new_data = train,
 
 nb_acc <- nb_pred %>%
   accuracy(truth = survived, estimate = .pred_class)
-print(log_acc)
-print(lda_acc)
-print(qda_acc)
-print(nb_acc)
 
 accuracies <- c(log_acc$.estimate, lda_acc$.estimate, 
                 qda_acc$.estimate, nb_acc$.estimate)
@@ -191,9 +186,6 @@ The log fit had the highest accuracy on the training data.
 
 Question 10
 ```{r}
-#Fit the model with the highest training accuracy to the testing data. Report the accuracy of the model on the testing data.
-
-#Again using the testing data, create a confusion matrix and visualize it. Plot an ROC curve and calculate the area under it (AUC).
 predict(log_fit, new_data = test, type = "prob")
 augment(log_fit, new_data = test) %>%
   conf_mat(truth = survived, estimate = .pred_class)
@@ -211,3 +203,4 @@ augment(log_fit, new_data = test) %>%
   roc_auc(survived, .pred_No) 
 ```
 
+This model performed well (not super accurate but it is above 50%). The training predicted 81% accuracy, but the testing got 78% accuracy, which is still pretty good. They do differ a bit, but it's a not a big difference and the small difference may be due to the fact that it was different subjects that were tested. 
